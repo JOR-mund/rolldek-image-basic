@@ -7,13 +7,15 @@ description: 通过 RollDek 已配置模型进行通用文生图与参考图编�
 
 使用本技能自带的 Node.js 客户端生成或编辑图片，直接保存接口返回的原图。配置与现有密钥共用用户目录 `.codex/rolldek/config.json` 和 Windows DPAPI 密钥库；无需重新输入已配置的密钥。
 
+各模型的编辑能力与已修正限制见 [能力核对记录](references/capability-audit.md)。
+
 ## 选择模型
 
 1. 用本技能目录的绝对路径执行 `node scripts/rolldek.mjs list`，查看模型、默认配置、渠道与密钥设置状态。
 2. 使用用户指定的模型和渠道；未指定模型时采用已配置的默认项并说明实际模型。同一模型有多个渠道时优先采用明确的默认项，否则询问渠道。
 3. 密钥缺失或需要更换时执行 `node scripts/rolldek.mjs configure`，通过原生图形密码窗口配置。窗口支持新增、移除配置、按模型调整默认分辨率和画质，以及 TXT 批量导入导出；不显示控制台分组或比例输入。GPT2.6 另有复杂度，Nano Banana 2.1 的画质相关控制为思考档位。不要在聊天中索取密钥或回显真实密钥库。用户明确导入、导出 TXT 时，由界面在内存中处理密钥并只读写用户选定的本地文件，保留运行时 DPAPI 加密存储。格式与导入规则见 [references/model-keys-txt.md](references/model-keys-txt.md)。
 4. GPT2.5 Sunburst/Flare 的渠道必须与密钥分组一致：`fixed` 为非官渠，`official` 为 RollDek 官渠。渠道未知时先在图形窗口确认。
-5. 用户说“gpt2.6 s”或“GPT2.6 S”时，从 `list` 的实际配置中选择模型为 `gpt-image-2.6-sunburst` 的项；配置名称可由用户改名，不能硬编码旧名称。RollDek 分组为 `image 2.6`。文生图可指定分辨率、画质 `auto/low/medium/high/xhigh/max`、复杂度 `low/medium/high`；分辨率转为 `size`，不套用 GPT2.5 固定尺寸表。参数按官方 2.6 原生协议适配，RollDek 透传尚未收费实测；失败后不自动换档重试。当前未接入该渠道的参考图编辑。
+5. 用户说“gpt2.6 s”或“GPT2.6 S”时，从 `list` 的实际配置中选择模型为 `gpt-image-2.6-sunburst` 的项；配置名称可由用户改名，不能硬编码旧名称。RollDek 分组为 `image 2.6`。支持文生图与参考图编辑，有参考图时走 `/v1/images/edits`；可指定画质 `auto/low/medium/high/xhigh/max`、复杂度 `low/medium/high`、蒙版、透明背景和 PNG/JPEG/WebP 输出。分辨率转为 `size`，不套用 GPT2.5 固定尺寸表。参数按官方 2.6 原生协议适配，RollDek 透传尚未收费实测；失败后不自动换档重试。未实测不等于禁止编辑，不应仅凭模型目录的文本输入标签拒绝参考图。
 
 ## 生成与编辑
 
@@ -38,7 +40,7 @@ node /absolute/path/to/rolldek-image-basic/scripts/rolldek.mjs generate --reques
 node /absolute/path/to/rolldek-image-basic/scripts/rolldek.mjs generate --request /absolute/path/to/request.json
 ```
 
-通用请求字段为 `profile`、`prompt`、`count`、`size`、`aspect_ratio`、`resolution`、`quality`、`complexity`、`thinking_level`、`references`、`image_references`、`mask`、`mask_reference`、`output_format`、`background`、`input_fidelity`、`output_compression`、`moderation`、`user`、`output_dir`、`timeout_seconds`。仅填写所选模型支持的字段；`count` 默认 1。`references` 使用本地绝对路径数组；Seedream 也支持 HTTPS / Data URL；JSON 图片引用和蒙版规则见 API 契约。
+通用请求字段为 `profile`、`prompt`、`count`、`size`、`aspect_ratio`、`resolution`、`quality`、`complexity`、`thinking_level`、`references`、`image_references`、`mask`、`mask_reference`、`output_format`、`background`、`input_fidelity`、`output_compression`、`moderation`、`user`、`output_dir`、`timeout_seconds`。仅填写所选模型支持的字段；`count` 默认 1。`references` 接受本地绝对路径数组；Seedream 和 Gemini 也支持 HTTPS / Data URL。Gemini 无扩展名的 URL 用 `{"url":"https://...","mime_type":"image/png"}` 指定类型。GPT JSON 图片引用和蒙版规则见 API 契约。
 
 `--dry-run` 不读取密钥、不访问生图接口，仅展示脱敏的协议和请求次数。确认请求符合用户要求后执行生成。默认保存到当前工作目录的 `rolldek-output`，返回每张图片的绝对路径与 `manifest.json`。用 Markdown 图片展示结果，说明实际模型和保存位置。
 

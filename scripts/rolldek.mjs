@@ -70,6 +70,38 @@ async function seedreamReference(value, readImage) {
   const image = await readImage(value);
   return `data:${image.mime};base64,${image.bytes.toString('base64')}`;
 }
+async function geminiReference(value, readImage) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    requireTrue(Object.keys(value).every(k=>['url','mime_type'].includes(k)) && typeof value.url==='string' && typeof value.mime_type==='string' && Object.hasOwn(mimeExtensions,value.mime_type), 'Gemini URL 参考图对象须包含 url 和 mime_type（PNG / JPEG / WebP）');
+    return {fileData:{mimeType:value.mime_type,fileUri:httpsUrl(value.url)}};
+  }
+  requireTrue(typeof value==='string','Gemini 参考图须为本地路径、HTTPS / Data URL 或 URL 对象');
+  if (value.startsWith('https://')) {
+    const url = httpsUrl(value);
+    const extension = path.extname(new URL(url).pathname).toLowerCase();
+    const mime = {'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'}[extension];
+    requireTrue(mime,'无扩展名的 Gemini 图片 URL 请使用 {"url":"https://...","mime_type":"image/png"} 指定类型');
+    return {fileData:{mimeType:mime,fileUri:url}};
+  }
+  if (value.startsWith('data:')) {
+    const ref = validateImageReference({image_url:value});
+    const match = /^data:(image\/(?:png|jpeg|webp));base64,(.*)$/s.exec(ref.image_url);
+    return {inlineData:{mimeType:match[1],data:decodeBase64(match[2]).toString('base64')}};
+  }
+  const im = await readImage(value);
+  return {inlineData:{mimeType:im.mime,data:im.bytes.toString('base64')}};
+}
+function rasterOptions(q, body, hasReferences, allowInputFidelity) {
+  if (!allowInputFidelity) rejectPresent(q,['input_fidelity'],body.model);
+  for (const field of advancedFields) if (q[field] !== undefined) body[field] = q[field];
+  if (body.output_format !== undefined) choice(body.output_format,['png','jpeg','webp'],'输出格式');
+  if (body.background !== undefined) choice(body.background,['transparent','opaque','auto'],'背景');
+  requireTrue(body.background !== 'transparent' || (body.output_format ?? 'png') !== 'jpeg','透明背景须使用 PNG / WebP');
+  if (body.input_fidelity !== undefined) { choice(body.input_fidelity,['high','low'],'input_fidelity'); requireTrue(hasReferences,'input_fidelity 只适用于编辑'); }
+  if (body.output_compression !== undefined) requireTrue(Number.isInteger(body.output_compression) && body.output_compression>=0 && body.output_compression<=100 && ['jpeg','webp'].includes(body.output_format),'output_compression 必须为0～100整数且配合JPEG/WebP');
+  if (body.moderation !== undefined) choice(body.moderation,['auto','low'],'moderation');
+  if (body.user !== undefined) requireTrue(typeof body.user==='string','user 必须为字符串');
+}
 function rejectPresent(q, fields, model) {
   for (const f of fields) requireTrue(q[f] === undefined, `${model} 未文档化支持参数 ${f}，请去掉此字段或选择对应模型`);
 }
@@ -93,11 +125,11 @@ function officialSize(value) {
 }
 function gpt26Size(q) {
   if (q.size !== undefined) {
+    requireTrue(q.resolution === undefined && (!q.aspect_ratio || q.aspect_ratio === 'auto'),'GPT2.6 size 与比例、分辨率不能同时指定');
     if (q.size === 'auto') return q.size;
     const match = /^(\d+)x(\d+)$/.exec(q.size);
     const [w,h] = match ? match.slice(1).map(Number) : [];
     requireTrue(Number.isSafeInteger(w) && Number.isSafeInteger(h) && w>0 && h>0 && w%16===0 && h%16===0 && w/h>=1/3 && w/h<=3,'GPT2.6 尺寸须为16倍数，比例须在1:3～3:1之间');
-    requireTrue(q.resolution === undefined && (!q.aspect_ratio || q.aspect_ratio === 'auto'),'GPT2.6 size 与比例、分辨率不能同时指定');
     return q.size;
   }
   const level = choice(String(q.resolution ?? '1K').toUpperCase(),['1K','2K','4K'],'GPT2.6分辨率');
@@ -156,8 +188,16 @@ export async function buildPlan(request, profile, { readImage = readLocalImage }
     } else if (references.length) {
       shape = imageDimensions((await loadImage(references[0])).bytes);
     } else {
-      requireTrue(!imageReferences.length,'JSON 参考图使用默认分辨率时，请在本次请求中指定 aspect_ratio 或 size');
-      shape = {width:1,height:1};
+      if (imageReferences.length) {
+        const embedded = imageReferences[0]?.image_url;
+        if (typeof embedded==='string' && embedded.startsWith('data:')) shape = imageDimensions(decodeBase64(validateImageReference(imageReferences[0]).image_url.split(',')[1]));
+        else {
+          requireTrue(request.resolution===undefined,'JSON 参考图指定分辨率时，请在本次请求中指定 aspect_ratio 或 size');
+          warnings.push('远程参考图无法读取尺寸，未应用本地默认分辨率；本次指定比例或像素尺寸后可固定分辨率。');
+          return mode==='official' ? 'auto' : undefined;
+        }
+      }
+      if (!shape) shape = {width:1,height:1};
     }
     requireTrue(shape.width>0 && shape.height>0,'参考图尺寸无效');
     const ratio = shape.width/shape.height;
@@ -182,13 +222,44 @@ export async function buildPlan(request, profile, { readImage = readLocalImage }
   };
 
   if (model.family === 'gpt26') {
-    requireTrue(!hasReferences, 'RollDek GPT2.6 S 当前公开能力为文生图；参考图编辑需要先核查该渠道的编辑契约');
+    // Reference edits use multipart local files or JSON image references.
+    requireTrue(references.length + imageReferences.length <= 16, 'GPT Images 参考图最多16张');
     requireTrue(q.prompt.length<=32000,'GPT2.6 prompt 最长32000字符');
-    rejectPresent(q, [...advancedFields,'mask','mask_reference'], model.id);
-    if (q.size !== undefined || q.resolution !== undefined || (q.aspect_ratio && q.aspect_ratio !== 'auto')) b.size = gpt26Size(q);
+    rasterOptions(q,b,hasReferences,false);
+    if (hasReferences && q.size===undefined && (!q.aspect_ratio || q.aspect_ratio==='auto') && q.resolution!==undefined) {
+      const embedded = imageReferences[0]?.image_url;
+      const shape = references.length ? imageDimensions((await loadImage(references[0])).bytes) : typeof embedded==='string' && embedded.startsWith('data:') ? imageDimensions(decodeBase64(validateImageReference(imageReferences[0]).image_url.split(',')[1])) : null;
+      if (shape) {
+        requireTrue(shape.width>0 && shape.height>0 && shape.width/shape.height>=1/3 && shape.width/shape.height<=3,'GPT2.6 参考图比例超出1:3～3:1，请明确指定输出尺寸');
+        const level = choice(String(q.resolution).toUpperCase(),['1K','2K','4K'],'GPT2.6分辨率');
+        const scale = { '1K':1024,'2K':2048,'4K':4096 }[level]/Math.max(shape.width,shape.height);
+        let w = Math.max(16,Math.floor(shape.width*scale/16)*16), h = Math.max(16,Math.floor(shape.height*scale/16)*16);
+        if (w/h<1/3) w = Math.ceil(h/3/16)*16;
+        if (w/h>3) h = Math.ceil(w/3/16)*16;
+        b.size = gpt26Size({size:`${w}x${h}`});
+      } else {
+        requireTrue(request.resolution===undefined,'远程参考图指定分辨率时，请在本次请求中指定 aspect_ratio 或 size');
+        b.size = 'auto';
+        warnings.push('远程参考图无法读取尺寸，使用接口自动尺寸；本次指定比例或像素尺寸后可固定分辨率。');
+      }
+    } else if (q.size !== undefined || q.resolution !== undefined || (q.aspect_ratio && q.aspect_ratio !== 'auto')) b.size = gpt26Size(q);
     if (q.quality !== undefined) b.quality = choice(q.quality,['auto','low','medium','high','xhigh','max'],'GPT2.6质量');
     if (q.complexity !== undefined) b.complexity = choice(q.complexity,['low','medium','high'],'GPT2.6复杂度');
     result.repetitions = count;
+    if (hasReferences) {
+      result.path = '/v1/images/edits';
+      if (imageReferences.length) {
+        b.images = imageReferences.map(validateImageReference);
+        requireTrue(!q.mask,'JSON 编辑请使用 mask_reference');
+        if (q.mask_reference) b.mask = validateImageReference(q.mask_reference);
+      }
+      else {
+        requireTrue(!q.mask_reference,'本地文件编辑请使用 mask');
+        result.encoding = 'multipart';
+        for (const p of references) result.files.push({field:references.length === 1 ? 'image' : 'image[]', ...(await loadImage(p))});
+        if (q.mask) result.files.push({field:'mask',...(await loadImage(q.mask))});
+      }
+    }
     warnings.push('GPT2.6 的 size、quality、complexity 按官方 Images 协议传递；RollDek 渠道尚未进行收费实测，每张图片独立提交。');
   } else if (model.family === 'seedream') {
     rejectPresent(q, ['quality',...advancedFields,'image_references','mask','mask_reference'], model.id);
@@ -213,7 +284,7 @@ export async function buildPlan(request, profile, { readImage = readLocalImage }
     if (q.aspect_ratio && q.aspect_ratio !== 'auto') imageSettings.aspectRatio = choice(q.aspect_ratio, ['gemini-flash','gemini-banana21'].includes(model.family) ? [...commonRatios,'8:1','4:1','1:4','1:8'] : commonRatios, 'Gemini比例');
     if (q.resolution) imageSettings.imageSize = choice(String(q.resolution).toUpperCase(), ['1K','2K','4K'], 'Gemini分辨率');
     const parts = [{text:q.prompt}];
-    for (const p of references) { const im = await readImage(p); parts.push({inlineData:{mimeType:im.mime,data:im.bytes.toString('base64')}}); }
+    for (const p of references) parts.push(await geminiReference(p,readImage));
     result.body = {contents:[{role:'user',parts}],generationConfig:{responseModalities:['IMAGE']}};
     if (q.thinking_level !== undefined) result.body.generationConfig.thinkingConfig = {thinkingLevel:choice(q.thinking_level,['minimal','medium','high'],'Nano Banana 2.1思考等级')};
     if (Object.keys(imageSettings).length) result.body.generationConfig.responseFormat = {image:imageSettings};
@@ -266,16 +337,7 @@ export async function buildPlan(request, profile, { readImage = readLocalImage }
       if (model.family === 'gpt25-base') rejectPresent(q,['quality',...advancedFields,'image_references','mask','mask_reference'],model.id);
       else {
         if (q.quality !== undefined) b.quality = choice(q.quality,['low','medium','high','xhigh','max','auto'],'GPT2.5质量');
-        for (const f of advancedFields) if (q[f] !== undefined) b[f] = q[f];
-        if (b.output_format !== undefined) choice(b.output_format,['png','jpeg','webp'],'输出格式');
-        if (b.background !== undefined) choice(b.background,['transparent','opaque','auto'],'背景');
-        requireTrue(b.background !== 'transparent' || (b.output_format ?? 'png') !== 'jpeg', '透明背景须使用 PNG / WebP');
-        if (b.input_fidelity !== undefined) { choice(b.input_fidelity,['high','low'],'input_fidelity'); requireTrue(hasReferences,'input_fidelity 只适用于编辑'); }
-        if (b.output_compression !== undefined) {
-          requireTrue(Number.isInteger(b.output_compression) && b.output_compression >= 0 && b.output_compression <= 100 && ['jpeg','webp'].includes(b.output_format), 'output_compression 必须为0～100整数且配合JPEG/WebP');
-        }
-        if (b.moderation !== undefined) choice(b.moderation,['auto','low'],'moderation');
-        if (b.user !== undefined) requireTrue(typeof b.user === 'string','user 必须为字符串');
+        rasterOptions(q,b,hasReferences,true);
       }
     }
     if (imageReferences.length) {

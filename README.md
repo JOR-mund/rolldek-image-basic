@@ -2,7 +2,7 @@
 
 通用文生图、参考图编辑与本地原图保存，包含 Windows 模型与密钥管理界面。可按模型保存默认分辨率、画质，以及 GPT 2.6 的复杂度和 Nano Banana 2.1 的思考档位；支持模型与密钥 TXT 导入导出。
 
-版本：1.0.0。适用于 Windows 10/11、Windows PowerShell 5.1 和 Node.js 22 或以上版本。
+版本：1.0.1。适用于 Windows 10/11、Windows PowerShell 5.1 和 Node.js 22 或以上版本。
 
 ## 安装
 
@@ -39,7 +39,7 @@ node .\scripts\rolldek.mjs configure
 
 默认生成模型为 GPT 2.6 Sunburst。每个渠道都需要自行配置可用密钥。GPT 2.5 的官渠／非官渠规则须与自己的密钥匹配。本包没有保存任何可直接调用的凭据。
 
-窗口按模型显示可用选项，本次生成明确指定的参数优先于已保存默认值。比例按每次任务决定。GPT 2.6 的参数依据原生 Images 协议适配到 RollDek，尚未进行该渠道的收费实测；当前只接入文生图。其他模型的参考图能力详见 [API 说明](references/api.md)。
+窗口按模型显示可用选项，本次生成明确指定的参数优先于已保存默认值。比例按每次任务决定。GPT 2.6 的参数依据原生 Images 协议适配到 RollDek，尚未进行该渠道的收费实测；现已接入参考图编辑、蒙版、透明背景和 PNG/JPEG/WebP 输出。其他模型的参考图能力详见 [API 说明](references/api.md)。
 
 ## 密钥与代码分离
 
@@ -87,3 +87,7 @@ node --test .\scripts\rolldek.test.mjs
 测试使用模拟响应与合成测试凭据，不访问付费生图接口。`package-manifest.json` 记录发布文件的 SHA-256，安装脚本会先检查完整性。
 
 此仓库仅包含通用 `rolldek-image-basic`，ai影棚的项目专属技能继续在该项目内管理。
+
+## v1.0.1 修正
+
+解除 GPT 2.6 参考图编辑的旧限制，接入蒙版与输出参数；补齐 Gemini 的 URL / Base64 参考图；修正默认分辨率对参考图比例的处理。更新不会覆盖已有密钥库和运行时配置。详细范围见 [模型能力核对记录](references/capability-audit.md)。

@@ -1,7 +1,6 @@
 {
   "name": "rolldek-image-basic",
-  "version": "1.0.0",
-  "release_date": "2026-11-05",
+  "version": "1.0.1",
   "credentials_included": false,
   "files": [
     {
@@ -16,13 +15,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 4280,
-      "sha256": "88786829799de81b51c92bdb4b1bb4c6192e1a17e60ba301dfbb6a4bb08469df"
+      "bytes": 4651,
+      "sha256": "eb7f9d3ae52d7f6765b47522434999677b8419daee9a3934bc83ca5aa4d27e36"
     },
     {
       "path": "SKILL.md",
-      "bytes": 4894,
-      "sha256": "3ed446781c33217208ed87da547ecf50b96cf4861322d37956703b3efe935ae5"
+      "bytes": 5260,
+      "sha256": "dda7c632a28847da7f42cab763322e46ada8695e00f4a2f0191ce2bcc7bc5869"
     },
     {
       "path": "agents/openai.yaml",
@@ -31,8 +30,8 @@
     },
     {
       "path": "assets/catalog.json",
-      "bytes": 2487,
-      "sha256": "92f54b152e11a6e8a8937549950814dccde9cfd1b7595adfea6c7e637051b5c9"
+      "bytes": 2515,
+      "sha256": "0e21542f71802582ff813baf0478d033e7444ca7a413c5e9b3c468615f1e4dce"
     },
     {
       "path": "assets/config.example.json",
@@ -46,8 +45,13 @@
     },
     {
       "path": "references/api.md",
-      "bytes": 9155,
-      "sha256": "19e3edd01b765b26fa244a9079804e3f1e0dc61c85a402ecccec0c5a2a1e885a"
+      "bytes": 10432,
+      "sha256": "a27132c0673e15385676639bf53afbea246312e58555acd5e4abca71a60937b7"
+    },
+    {
+      "path": "references/capability-audit.md",
+      "bytes": 3545,
+      "sha256": "c8744a9b41044f80d405d95c08aa2656995544778343622b8c3f763182861bf0"
     },
     {
       "path": "references/model-keys-txt.md",
@@ -86,18 +90,18 @@
     },
     {
       "path": "scripts/image-dimensions.mjs",
-      "bytes": 2020,
-      "sha256": "09efd5c1fb87feaec359130aa84fd8b24fc3fa0e2ceb32c293ae68ffa1e33641"
+      "bytes": 3024,
+      "sha256": "ca319dabf0e21c51fcae49688fe0ae8af0ceecad12a59f33235efa399524c3b0"
     },
     {
       "path": "scripts/rolldek.mjs",
-      "bytes": 33985,
-      "sha256": "06ad8b532405040231eb7430bb1b1b100575a08ba4ea51d8d4bbb99ea2cc7294"
+      "bytes": 38196,
+      "sha256": "621d34d3bc25e39aefac1787477fe5abdbacaf483c7d53994d5775f31310fa4d"
     },
     {
       "path": "scripts/rolldek.test.mjs",
-      "bytes": 22283,
-      "sha256": "13b7ab34caef6e1cabc91c68dc9dc901070fef7c58a630d44e2f7e3066a04f41"
+      "bytes": 28003,
+      "sha256": "0af0630e7fff26bf91423d154830d18bdffc7a7d9d9c1b67ccf16c0b70c3d009"
     }
   ]
 }

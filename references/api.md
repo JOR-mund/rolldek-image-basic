@@ -6,7 +6,7 @@
 
 配置窗口按模型保存 `defaults.resolution`、`defaults.quality`，GPT2.6 另有 `defaults.complexity`，Nano Banana 2.1 使用 `defaults.thinking_level`。界面不设置比例。选择“接口默认”不保存该字段；本次请求的同名字段优先，显式像素 `size` 优先于配置中的分辨率。Seedream 的 `size` 是比例，仍保留独立的默认分辨率。
 
-GPT2.5 的 `resolution` 是客户端预设，转为文档像素表中的 `size`，不向 API 发送 `resolution`。本次未指定比例时，有本地参考图则读取第一张图的宽高，无参考图则用正方形；非官渠选择最接近的受支持比例并报告差异。官渠可将非表内比例换算成满足其约束的16倍数尺寸。JSON 参考图无法读取尺寸时，需本次请求明确 `aspect_ratio` 或 `size`。这些换算是客户端行为。
+GPT2.5 的 `resolution` 是客户端预设，转为文档像素表中的 `size`，不向 API 发送 `resolution`。本次未指定比例时，有本地或 Data URL 参考图则读取第一张图的宽高，JPEG 考虑 EXIF 方向，无参考图则用正方形；非官渠选择最接近的受支持比例并报告差异。官渠可将非表内比例换算成满足其约束的16倍数尺寸。远程 JSON 参考图无法读取尺寸时，隐含的默认分辨率不再阻止编辑：官渠传 `size:auto`，非官渠省略尺寸，并给出提示；本次明确要求固定分辨率时需指定 `aspect_ratio` 或 `size`。这些换算是客户端行为。
 
 ## GPT Image 2
 
@@ -54,7 +54,7 @@ RollDek 模型详情的公共图像参数面板列出了 `size` 和 `quality`，
 - `quality`：`auto/low/medium/high/xhigh/max`。
 - `complexity`：`low/medium/high`，与渲染画质独立；省略时使用接口默认。
 - `size`：`auto` 或正整数 `WIDTHxHEIGHT`，宽高为16的倍数，比例1:3～3:1。这里不把 GPT2.5 的固定尺寸表或上限当成2.6的契约。
-- 本地 `resolution` 预设为 `1K/2K/4K`，长边分别以1024/2048/4096为目标，保持本次比例与16像素步长；这是本地尺寸策略，最终接受范围由渠道决定。例如2K的3:4为1536x2048，2:3为1344x2016。未指定比例时采用正方形。尺寸与画质可独立配置。
+- 本地 `resolution` 预设为 `1K/2K/4K`，长边分别以1024/2048/4096为目标，保持本次比例与16像素步长；这是本地尺寸策略，最终接受范围由渠道决定。例如2K的3:4为1536x2048，2:3为1344x2016。未指定比例的编辑会读取第一张本地或 Data URL 参考图的方向与尺寸，并按16像素取整，不会一律改成方图。远程图片无法读取尺寸时，隐含默认分辨率使用 `size:auto` 并提示；本次明确要求固定分辨率时需指定比例或像素尺寸。无参考图的文生图未指定比例时采用正方形。
 
 配置名以本地 `list` 结果为准。示例中的 `profile` 须替换成实际配置名称：
 
@@ -64,7 +64,7 @@ RollDek 模型详情的公共图像参数面板列出了 `size` 和 `quality`，
 
 客户端每张图片独立提交，不发送 `n` 或 `response_format`；按标准 Images 响应提取 `data[].b64_json` 或 `data[].url` 并保存。目录说明按次计费；不要因超时自动重发。
 
-RollDek 的目录仍将2.6标为文本输入；参考图、蒙版和其他增强参数尚未接入。`channel_mode` 不用于本模型的尺寸选择。没有填写默认参数时省略对应字段，使用服务端默认；不要擅自复制官方直连技能的密钥或更换 API 地址。
+参考图编辑依据 [官方编辑接口](https://developers.openai.com/api/reference/resources/images/methods/edit) 兼容接入：本地文件 multipart POST `/v1/images/edits`，单图用 `image`、多图用 `image[]`；JSON 用 `image_references` 映射成 `images`，每项 `image_url` / `file_id` 二选一，最多16张。蒙版分别用本地 `mask` 或 JSON `mask_reference`；可设置 `background`、PNG/JPEG/WebP `output_format`、JPEG/WebP `output_compression`、`moderation` 和 `user`。2.6 不传旧版 `input_fidelity`。RollDek 透传尚未收费实测，这不构成客户端禁止编辑的理由。`channel_mode` 不用于本模型尺寸选择。没有填写默认参数时省略对应字段；不要复制官方直连技能的密钥或更换 API 地址。
 
 ## Seedream 5.0 Pro
 
@@ -80,7 +80,7 @@ RollDek 的目录仍将2.6标为文本输入；参考图、蒙版和其他增强
 
 gemini-3-pro-image-preview、gemini-3.1-flash-image-preview：JSON POST /v1beta/models/{model}:generateContent，x-goog-api-key: KEY（也兼容Bearer）。
 
-文本：contents=[{role:"user",parts:[{text:PROMPT}]}]。参考图按顺序增加inlineData:{mimeType,data} part，最多14张。
+文本：contents=[{role:"user",parts:[{text:PROMPT}]}]。参考图按顺序增加 `inlineData:{mimeType,data}` 或 `fileData:{mimeType,fileUri}` part，两种合计最多14张。`references` 支持本地绝对路径、完整 Data URL、带 `.png/.jpg/.jpeg/.webp` 扩展名的 HTTPS URL。无扩展名的 HTTPS 图片用 `{"url":"https://...","mime_type":"image/png"}`，可与本地图片混用；客户端不下载 URL 图片，而由接口读取。
 
 generationConfig.responseModalities=["IMAGE"]，比例及分辨率在 **generationConfig.responseFormat.image** 下，分别为aspectRatio和大写imageSize 1K/2K/4K。不要替换成其他Gemini实现常见的imageConfig。
 

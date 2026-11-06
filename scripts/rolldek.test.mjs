@@ -27,12 +27,6 @@ test('all ten supported models respect their generation and editing capabilities
   assert.equal(catalog.filter(m=>m.documented).length,10);
   for(const m of catalog.filter(m=>m.documented)) {
     const plain = await buildPlan({prompt:'test'},profile(m.id));
-    if(m.family==='gpt26') {
-      assert.equal(plain.path,'/v1/images/generations');
-      assert.deepEqual(plain.body,{model:m.id,prompt:'test'});
-      await assert.rejects(buildPlan({prompt:'edit',references:[ref1]},profile(m.id),{readImage}),/文生图/);
-      continue;
-    }
     const edited = await buildPlan({prompt:'edit',references:[ref1,ref2]},profile(m.id),{readImage});
     if(m.family.startsWith('gemini-')) {
       assert.equal(plain.path,`/v1beta/models/${m.id}:generateContent`);
@@ -70,7 +64,7 @@ test('GPT2.6 S sends native resolution, quality and complexity settings and gene
     assert.equal(p.body.complexity,'low');
   }
   for(const fields of [{size:'1025x1024'},{aspect_ratio:'4:1',resolution:'2K'},{quality:'hd'},{complexity:'max'}]) await assert.rejects(buildPlan({prompt:'test',...fields},current));
-  await assert.rejects(buildPlan({prompt:'test',background:'transparent'},current),/未文档化支持参数/);
+  await assert.rejects(buildPlan({prompt:'test',background:'transparent',output_format:'jpeg'},current),/透明/);
   await assert.rejects(buildPlan({prompt:'test',complexity:'high'},profile('gpt-image-2.5-sunburst')),/complexity/);
   let submissions=0;
   const config={default_profile:'gpt2.6-s',profiles:{'gpt2.6-s':configured}};
@@ -83,6 +77,67 @@ test('GPT2.6 S sends native resolution, quality and complexity settings and gene
   assert.equal(submissions,2);
   assert.equal(result.images.length,2);
   for(const image of result.images)assert.deepEqual(await fs.readFile(image.path),png);
+});
+
+test('GPT2.6 edits send ordered references, masks and configured rendering parameters to the editing endpoint',async()=>{
+  const current={...profile('gpt-image-2.6-sunburst'),defaults:{resolution:'2K',quality:'xhigh',complexity:'high'}};
+  const single=await buildPlan({prompt:'edit',references:[ref1]},current,{readImage});
+  assert.equal(single.path,'/v1/images/edits');assert.equal(single.files[0].field,'image');
+  const json=await buildPlan({prompt:'edit',aspect_ratio:'3:4',image_references:[{image_url:'https://example.com/ref.png'},{file_id:'file-ref'}],mask_reference:{file_id:'file-mask'},background:'transparent',output_format:'png'},current);
+  assert.equal(json.path,'/v1/images/edits');assert.equal(json.encoding,'json');
+  assert.deepEqual(json.body.mask,{file_id:'file-mask'});
+  assert.equal(json.body.images[1].file_id,'file-ref');
+  assert.equal(json.body.size,'1536x2048');assert.equal(json.body.background,'transparent');
+  await assert.rejects(buildPlan({prompt:'edit',references:[ref1],image_references:[{file_id:'f'}]},current),/不能同时/);
+  await assert.rejects(buildPlan({prompt:'edit',references:Array(17).fill(ref1)},current),/16/);
+  await assert.rejects(buildPlan({prompt:'edit',references:[ref1],input_fidelity:'high'},current),/input_fidelity/);
+  let submissions=0;
+  const result=await generate({prompt:'edit',references:[ref1,ref2],mask:ref1,aspect_ratio:'3:4',count:2,output_format:'webp',output_compression:90,background:'transparent',output_dir:temporary},{profiles:{p:current},default_profile:'p'},{keyLoader:async()=>'synthetic-edit-key',fetchImpl:async(url,options)=>{
+    submissions++;
+    assert.equal(url,'https://rolldek.com/v1/images/edits');
+    assert.ok(options.body instanceof FormData);
+    assert.deepEqual(options.body.getAll('image[]').map(f=>f.name),['reference.png','reference2.png']);
+    assert.equal(options.body.get('mask').name,'reference.png');
+    assert.deepEqual(Buffer.from(await options.body.getAll('image[]')[0].arrayBuffer()),png);
+    for(const [key,value] of Object.entries({model:current.model,size:'1536x2048',quality:'xhigh',complexity:'high',output_format:'webp',output_compression:'90',background:'transparent'}))assert.equal(options.body.get(key),value);
+    assert.equal(options.body.has('n'),false);assert.equal(options.body.has('response_format'),false);
+    return response(dataImages(1));
+  }});
+  assert.equal(submissions,2);assert.equal(result.images.length,2);
+  const preview=await generate({prompt:'edit',references:[ref1]}, {profiles:{p:current},default_profile:'p'}, {dryRun:true,keyLoader:()=>{throw Error('credential access');},fetchImpl:()=>{throw Error('network');}});
+  assert.equal(preview.path,'/v1/images/edits');
+});
+
+test('Gemini accepts mixed local, Base64 and URL references in order without downloading remote images',async()=>{
+  for(const model of ['gemini-3-pro-image-preview','gemini-3.1-flash-image-preview','gemini-nano-banana-2.1']) {
+    let localReads=0;
+    const p=await buildPlan({prompt:'edit',references:[ref1,'https://example.com/reference.jpg?version=1','data:image/png;base64,'+png.toString('base64'),{url:'https://example.com/image?id=1',mime_type:'image/webp'}]},profile(model),{readImage:async file=>{localReads++;return readImage(file);}});
+    const parts=p.body.contents[0].parts;
+    assert.equal(localReads,1);
+    assert.equal(parts[1].inlineData.mimeType,'image/png');
+    assert.deepEqual(parts[2],{fileData:{mimeType:'image/jpeg',fileUri:'https://example.com/reference.jpg?version=1'}});
+    assert.equal(parts[3].inlineData.data,png.toString('base64'));
+    assert.deepEqual(parts[4],{fileData:{mimeType:'image/webp',fileUri:'https://example.com/image?id=1'}});
+  }
+  await assert.rejects(buildPlan({prompt:'t',references:['https://example.com/no-extension']},profile('gemini-3-pro-image-preview')),/mime_type/);
+  await assert.rejects(buildPlan({prompt:'t',references:[{url:'http://example.com/x',mime_type:'image/png'}]},profile('gemini-nano-banana-2.1')),/HTTPS/);
+  await assert.rejects(buildPlan({prompt:'t',references:[{url:'https://example.com/x',mime_type:'toString'}]},profile('gemini-nano-banana-2.1')),/mime_type/);
+});
+
+test('GPT2.6 editing resolution follows reference shape and remote defaults do not block valid edits',async()=>{
+  const current={...profile('gpt-image-2.6-sunburst'),defaults:{resolution:'2K'}};
+  const portrait=Buffer.from(png);portrait.writeUInt32BE(768,16);portrait.writeUInt32BE(1024,20);
+  const edited=await buildPlan({prompt:'edit',references:[ref1]},current,{readImage:async()=>({bytes:portrait,mime:'image/png',name:'portrait.png'})});
+  assert.equal(edited.body.size,'1536x2048');
+  const tiff=Buffer.alloc(26);tiff.write('II');tiff.writeUInt16LE(42,2);tiff.writeUInt32LE(8,4);tiff.writeUInt16LE(1,8);tiff.writeUInt16LE(0x112,10);tiff.writeUInt16LE(3,12);tiff.writeUInt32LE(1,14);tiff.writeUInt16LE(6,18);
+  const exif=Buffer.concat([Buffer.from('Exif\0\0','ascii'),tiff]);
+  const segment=Buffer.alloc(4);segment[0]=255;segment[1]=225;segment.writeUInt16BE(exif.length+2,2);
+  const jpeg=Buffer.concat([Buffer.from([255,216]),segment,exif,Buffer.from([255,192,0,17,8,4,176,3,32,3,1,17,0,2,17,0,3,17,0,255,217])]);
+  const rotated=await buildPlan({prompt:'edit',references:[ref1]},current,{readImage:async()=>({bytes:jpeg,mime:'image/jpeg',name:'oriented.jpg'})});
+  assert.equal(rotated.body.size,'2048x1360');
+  const remote=await buildPlan({prompt:'edit',image_references:[{file_id:'remote-file'}]},current);
+  assert.equal(remote.path,'/v1/images/edits');assert.equal(remote.body.size,'auto');assert.ok(remote.warnings.length>1);
+  await assert.rejects(buildPlan({prompt:'edit',image_references:[{file_id:'remote-file'}],resolution:'2K'},current),/指定 aspect_ratio 或 size/);
 });
 
 test('nonofficial GPT2.5 omits n for both one and multiple images, and uses the fixed pixel table',async()=>{
@@ -180,7 +235,10 @@ test('GPT resolution defaults follow local reference dimensions and validate cus
     assert.equal(plan.path,'/v1/images/edits');
     assert.equal(reads,1);
     assert.equal(plan.body.resolution,undefined);
-    await assert.rejects(buildPlan({prompt:'edit',image_references:[{file_id:'f'}]},current),/指定 aspect_ratio 或 size/);
+    const remote=await buildPlan({prompt:'edit',image_references:[{file_id:'f'}]},current);
+    assert.equal(remote.path,'/v1/images/edits');
+    assert.equal(remote.body.size,mode==='official'?'auto':undefined);
+    await assert.rejects(buildPlan({prompt:'edit',image_references:[{file_id:'f'}],resolution:'2K'},current),/指定 aspect_ratio 或 size/);
   }
   for(const [ratio,sizes] of Object.entries(fixedSizes)) for(const [i,size] of sizes.entries()) {
     const plan=await buildPlan({prompt:'t',aspect_ratio:ratio,resolution:['1K','2K','4K'][i]},profile('gpt-image-2.5-sunburst','official'));
