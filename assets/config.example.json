@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "api_base": "https://rolldek.com",
+  "default_profile": "gpt-image-2.6-sunburst",
+  "profiles": {
+    "nano-banana-2.1": {
+      "model": "gemini-nano-banana-2.1",
+      "key_alias": "nano-banana-2.1",
+      "api_group": "",
+      "channel_mode": "fixed",
+      "defaults": {
+        "resolution": "2K",
+        "thinking_level": "high"
+      }
+    },
+    "seedream-5.0": {
+      "model": "seedream-5.0",
+      "key_alias": "seedream-5.0",
+      "api_group": "",
+      "channel_mode": "fixed",
+      "defaults": {
+        "resolution": "2K"
+      }
+    },
+    "gpt-image-2.6-sunburst": {
+      "model": "gpt-image-2.6-sunburst",
+      "key_alias": "gpt-image-2.6-sunburst",
+      "api_group": "",
+      "channel_mode": "fixed",
+      "defaults": {
+        "resolution": "2K",
+        "quality": "xhigh",
+        "complexity": "high"
+      }
+    },
+    "gpt-image-2.5-sunburst": {
+      "model": "gpt-image-2.5-sunburst",
+      "key_alias": "gpt-image-2.5-sunburst",
+      "api_group": "",
+      "channel_mode": "official",
+      "defaults": {
+        "resolution": "2K",
+        "quality": "xhigh"
+      }
+    },
+    "gemini-3-pro-image": {
+      "model": "gemini-3-pro-image-preview",
+      "key_alias": "gemini-3-pro-image",
+      "api_group": "",
+      "channel_mode": "fixed",
+      "defaults": {
+        "resolution": "2K"
+      }
+    },
+    "gemini-3.1-flash-image": {
+      "model": "gemini-3.1-flash-image-preview",
+      "key_alias": "gemini-3.1-flash-image",
+      "api_group": "",
+      "channel_mode": "fixed",
+      "defaults": {
+        "resolution": "2K"
+      }
+    }
+  }
+}

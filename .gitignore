@@ -1,0 +1,27 @@
+# Runtime configuration and credentials
+.env
+.env.*
+config.json
+config.json.*
+vault*.json
+*.dpapi.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.txt
+*.bak
+*.tmp
+*.log
+
+# Generated data and local tools
+rolldek-output/
+output/
+dist/
+node_modules/
+__pycache__/
+*.pyc
+*.zip
+*.lnk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,2 @@
+# Keep Windows PowerShell BOMs and package integrity hashes unchanged.
+* -text

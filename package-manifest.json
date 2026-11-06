@@ -1,0 +1,103 @@
+{
+  "name": "rolldek-image-basic",
+  "version": "1.0.0",
+  "release_date": "2026-11-05",
+  "credentials_included": false,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 79,
+      "sha256": "1f9835c409be5df914908b5a0ec822c3a5e9733aecb0072094d0f04899df902c"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 277,
+      "sha256": "fbfdf48bb0d66686dd9cc7736e67f8682301e2bd33921f4e024101c8e0e4c6b9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4280,
+      "sha256": "88786829799de81b51c92bdb4b1bb4c6192e1a17e60ba301dfbb6a4bb08469df"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 4894,
+      "sha256": "3ed446781c33217208ed87da547ecf50b96cf4861322d37956703b3efe935ae5"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "bytes": 264,
+      "sha256": "0c0d0103c176d3e7883e1e2b997e2b64d1721d1342dccfa0110ef1a5db33c22a"
+    },
+    {
+      "path": "assets/catalog.json",
+      "bytes": 2487,
+      "sha256": "92f54b152e11a6e8a8937549950814dccde9cfd1b7595adfea6c7e637051b5c9"
+    },
+    {
+      "path": "assets/config.example.json",
+      "bytes": 1610,
+      "sha256": "56ca299faac0fbb08777563c4c90f39340ce1421118b1614c7a0a322ee3b274b"
+    },
+    {
+      "path": "install.ps1",
+      "bytes": 2255,
+      "sha256": "02061572e9378c2305fa46cb684139e3e8152b892f70cf3d53476a8b43e1b2f6"
+    },
+    {
+      "path": "references/api.md",
+      "bytes": 9155,
+      "sha256": "19e3edd01b765b26fa244a9079804e3f1e0dc61c85a402ecccec0c5a2a1e885a"
+    },
+    {
+      "path": "references/model-keys-txt.md",
+      "bytes": 1813,
+      "sha256": "4ee9210675bed8548c21effb81e6f4c77f21fa78a3b129508d7cab2185450616"
+    },
+    {
+      "path": "scripts/Configure-Keys.ps1",
+      "bytes": 27691,
+      "sha256": "0fca2bfc61226df9b5e25938dd00deee29372391248ea9fc9cd71b1422238189"
+    },
+    {
+      "path": "scripts/Http-Request.ps1",
+      "bytes": 2577,
+      "sha256": "28bc7325713f2cc1ddea191703b77d46d4cfa944a7872d94da8b2fe2733ad748"
+    },
+    {
+      "path": "scripts/Model-Keys-Txt.Tests.ps1",
+      "bytes": 4811,
+      "sha256": "2476ccfadd2428cc52a5c7066290dd2b0d77eeba6d015f74047831363b2895b1"
+    },
+    {
+      "path": "scripts/Model-Keys-Txt.ps1",
+      "bytes": 7771,
+      "sha256": "a203d3936ce8cb8929aac609a3924b9dc1e84df7d6f009c43955b8fa7a67f674"
+    },
+    {
+      "path": "scripts/Open-Configuration.ps1",
+      "bytes": 3061,
+      "sha256": "2f7e34c130d6066a46deafc913b30c44e5327457191c28d942f0f7c4c16936e8"
+    },
+    {
+      "path": "scripts/Read-Vault.ps1",
+      "bytes": 1137,
+      "sha256": "f885ca15cf08be1c5b94be54a0509b8581aaa494e093f6e5bc0bd2b2eb34e2e4"
+    },
+    {
+      "path": "scripts/image-dimensions.mjs",
+      "bytes": 2020,
+      "sha256": "09efd5c1fb87feaec359130aa84fd8b24fc3fa0e2ceb32c293ae68ffa1e33641"
+    },
+    {
+      "path": "scripts/rolldek.mjs",
+      "bytes": 33985,
+      "sha256": "06ad8b532405040231eb7430bb1b1b100575a08ba4ea51d8d4bbb99ea2cc7294"
+    },
+    {
+      "path": "scripts/rolldek.test.mjs",
+      "bytes": 22283,
+      "sha256": "13b7ab34caef6e1cabc91c68dc9dc901070fef7c58a630d44e2f7e3066a04f41"
+    }
+  ]
+}

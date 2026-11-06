@@ -1,0 +1,4 @@
+interface:
+  display_name: "RollDek 基础生图"
+  short_description: "通用 RollDek 文生图与参考图编辑，保留原图并保存到本地目录"
+  default_prompt: "使用 $rolldek-image-basic 按我指定的模型和比例生成图片并保存原图。"

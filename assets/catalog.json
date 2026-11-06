@@ -1,0 +1,18 @@
+{
+  "checked_at":"2026-10-01",
+  "models":[
+    {"id":"gpt-image-2","family":"gpt2","documented":true,"hidden":true,"groups":["图片","default"],"source":"https://www.rolldek.com/docs/img2.md"},
+    {"id":"gpt-image-2-high","family":"gpt2","documented":true,"hidden":true,"groups":["default"],"source":"https://www.rolldek.com/docs/img2.md"},
+    {"id":"gpt-image-2.5","family":"gpt25-base","documented":true,"hidden":true,"groups":["default","图片"],"source":"https://www.rolldek.com/docs/img25.md"},
+    {"id":"gpt-image-2.5-sunburst","family":"gpt25","documented":true,"groups":["image2.5原生","gpt-image 1k&超分","image2.5官渠","image2.5专线","图片2"],"source":"https://www.rolldek.com/docs/img25.md"},
+    {"id":"gpt-image-2.5-flare","family":"gpt25","documented":true,"hidden":true,"groups":["image2.5原生","gpt-image 1k&超分","image2.5官渠","image2.5专线"],"source":"https://www.rolldek.com/docs/img25.md"},
+    {"id":"gpt-image-2.6-sunburst","family":"gpt26","documented":true,"contract_scope":"images-text-native-parameters","parameter_source":"https://developers.openai.com/api/docs/guides/image-prompting?model=gpt-image-2.6","provider_parameters_live_tested":false,"groups":["image 2.6"],"group_ids":["grp_c8b82c5cc886342e68a428ea2eeef1d7"],"checked_at":"2026-11-05","source":"https://rolldek.com/api/pricing"},
+    {"id":"seedream-5.0","family":"seedream","documented":true,"groups":["seedream"],"source":"https://www.rolldek.com/docs/seedream.md"},
+    {"id":"gemini-3-pro-image-preview","family":"gemini-pro","documented":true,"groups":["default","香蕉","香蕉专线"],"source":"https://www.rolldek.com/docs/banana.md"},
+    {"id":"gemini-3.1-flash-image-preview","family":"gemini-flash","documented":true,"groups":["default","香蕉","香蕉专线"],"source":"https://www.rolldek.com/docs/banana.md"},
+    {"id":"gemini-nano-banana-2.1","family":"gemini-banana21","documented":true,"groups":["default","香蕉"],"checked_at":"2026-10-20","source":"https://www.rolldek.com/docs/banana-2-1.md"},
+    {"id":"gpt-image-2-official","family":"unverified","documented":false,"groups":[],"source":"https://rolldek.com/"},
+    {"id":"gemini-3-pro-image","family":"unverified","documented":false,"groups":["default","香蕉","香蕉专线"],"source":"https://rolldek.com/api/pricing"},
+    {"id":"gemini-3.1-flash-image","family":"unverified","documented":false,"groups":["default","香蕉","香蕉专线"],"source":"https://rolldek.com/api/pricing"}
+  ]
+}
